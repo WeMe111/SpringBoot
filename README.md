@@ -1,4 +1,5 @@
 # 스프링부트
+***프로젝트 기간: 2022.04.20 ~ 2022.05.11***
 
 ## 목차
 
@@ -47,7 +48,7 @@ Gradle이란 기본적으로 빌드 배포 도구(Build Tool)이다. 안드로�
 - 설정 주입시 프로젝트의 조건을 체크할 수 있어서 프로젝트별로 주입되는 설정을 다르게 할 수 있다.  
 - Gradle은 메이븐보다 최대 100배 빠르다.  
 
-## 타임리프 기본 문법
+### 타임리프 기본 문법
 변수 : ${...} - ${student.id}  
 선택자 : *{...} - *{id}  
 메시지 : #{...} - #{id}  
@@ -65,7 +66,91 @@ default : value ?: defaultValue
 
 ## 환결설정
 
-## 
+## 도메인 분석 설계
+### Member Entity 
+```
+@Entity
+@Getter
+@Setter
+public class Member {
+	
+	@Id @GeneratedValue
+	@Column(name = "member_id")
+	private Long id;
+	
+	private String name;
+	
+	@Embedded
+	private Address address;
+	
+	@OneToMany(mappedBy = "member")
+	private List<Order> order = new ArrayList<>();
+}
+```  
+***@Id, @GenerratedValue***: 기본키를 자동으로 생성할 때에는 @Id와 @GenerratedValue 어노테이션이 함께 사용되어야 한다.
+[참고](https://velog.io/@gudnr1451/GeneratedValue-%EC%A0%95%EB%A6%AC)  
+***@Column***: 객체 필드를 테이블의 컬럼에 매핑시켜주는 애노테이션이다.
+[참고](https://ttl-blog.tistory.com/114)  
+***@OneToMany***: 단반향으로 하게되면 문제점이 많아 mappedBY를 설정해줘서 양방향으로 만들어준다.
+[참고](https://dublin-java.tistory.com/51)  
+***@Embedded***: 새로운 값 타입을 직접 정의해서 사용할 수 있다.
+[참고](https://velog.io/@conatuseus/JPA-%EC%9E%84%EB%B2%A0%EB%94%94%EB%93%9C-%ED%83%80%EC%9E%85embedded-type-8ak3ygq8wo)  
+
+
+![image](https://user-images.githubusercontent.com/94879395/164642968-41a52dc7-a1bc-46ba-815a-a3918e7b6e2d.png)  
+
+### Addrres
+```
+@Embeddable
+@Getter
+public class Address {
+	
+	private String city;
+	private String street;
+	private String zipcode;
+	
+	protected Address() {
+	 }
+	
+	public Address(String city, String street, String zipcode) {
+		 this.city = city;
+		 this.street = street;
+		 this.zipcode = zipcode;
+	 }
+}
+```  
+***@Embeddable***: 값 타입을 정의하는 곳에 표시  
+
+### Order
+```
+@Entity
+@Table(name = "orders")
+@Getter @Setter
+public class Order {
+
+	@Id @GeneratedValue
+	@Column(name = "order_id")
+	private Long id;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "member_id")
+	private Member member;
+	
+	@OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+	private List<OrderItem> orderItem = new ArrayList<>();
+	
+	@OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	@JoinColumn(name = "delivery_id")
+	private Delivery delivery;
+	
+	private LocalDateTime orderDate;  //주문시간
+	
+	@Enumerated(EnumType.STRING)
+	private OrderStatus status;  //주문상태 [oder, cancel]
+  
+}
+```  
+***@Table***: 
 
 ## 기타
 
