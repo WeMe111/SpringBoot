@@ -152,12 +152,100 @@ public class Order {
 }
 ```  
 ***@Table***: 엔티티와 매핑할 테이블을 지정, 생략 시 매핑한 엔티티 이므로 테이블 이름(Order)으로 사용
-[참조](https://data-make.tistory.com/610)  
-***@ManyToOne***:  
-***@OneToOne***:  
-***@JoinColumn***:  
-***@Enumerated***:  
-***LocalDateTime***:  
+[참고](https://data-make.tistory.com/610)  
+***@ManyToOne***: 외래키가 있는 곳에 참조를 걸고 연관관계 매핑을 한다.  
+[참조](https://jyami.tistory.com/21)  
+***@OneToOne***:  [참고](https://ict-nroo.tistory.com/126)  
+***@JoinColumn***:  조인컬럼은 외래키를 매핑할 때 사용한다. name 속성에는 매핑할 외래키 이름을 지정한다.
+[참고](https://yellowh.tistory.com/121)  
+***@Enumerated***:  @Enumerated(EnumType.ORDINAL)
+[참고](https://lng1982.tistory.com/280)  
+                    -> enum 순서 값을 저장  
+                    @Enumerated(EnumType.STRING)  
+                    -> enum 이름을 저장  
+***LocalDateTime***: 날짜와 시간 정보 모두가 필요할 때 사용.  
+
+![image](https://user-images.githubusercontent.com/94879395/165016978-86de5604-0a96-470e-a3f6-3e76223633c2.png)  
+## 회원 도메인 
+### MemberRepository
+```
+@Repository
+public class MemberRepository {
+	
+	@PersistenceContext
+	private EntityManager em;
+	
+	public void save(Member member) {
+		em.persist(member);
+	}
+
+	public Member findOne(Long id) {
+		return em.find(Member.class, id);
+	}
+	
+	public List<Member> findAll(){
+		return em.createQuery("select m from Member m", Member.class)
+				.getResultList();
+	}
+	
+	public List<Member> findByName(String name) {
+		 return em.createQuery("select m from Member m where m.name = :name",
+		Member.class)
+		 .setParameter("name", name)
+		 .getResultList();
+		 }
+}
+```  
+***@Repository***: Entity에 의해 생성된 DB에 접근하는 메서드(ex) findAll()) 들을 사용하기 위한 인터페이스이다. 위에서 엔티티를 선언함으로써 데이터베이스 구조를 만들었다면, 여기에 어떤 값을 넣거나, 넣어진 값을 조회하는 등의 CRUD(Create, Read, Update, Delete)를 해야 쓸모가 있는데, 이것을 어떻게 할 것인지 정의해주는 계층이라고 생각하면 된다.
+[참고](https://whitepro.tistory.com/265)  
+***@PersistenceContext***: EntityManagerFactor객체는 고객의 요청이 올 때마다 즉, 각 쓰레드마다 EntityManager 객체를 생성하고 해당 객체는 내부적으로 DB Connection Pool을 활용하여 DB에 연결을 합니다.
+[참고](https://jaimemin.tistory.com/1898)  
+***persist***: Persist는 최초 생성된 Entity를 영속화 하는데 사용된다.  
+
+### MemberServise
+```
+@Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
+public class MemberService {
+
+	private final MemberRepository memberRepository;
+
+	/**
+	 * 회원가입
+	 */
+	@Transactional // 변경
+	public Long join(Member member) {
+		validateDuplicateMember(member); // 중복 회원 검증
+		memberRepository.save(member);
+		return member.getId();
+	}
+
+	private void validateDuplicateMember(Member member) {
+		List<Member> findMembers = memberRepository.findByName(member.getName());
+		if (!findMembers.isEmpty()) {
+			throw new IllegalStateException("이미 존재하는 회원입니다.");
+		}
+	}
+
+	/**
+	 * 전체 회원 조회
+	 */
+	public List<Member> findMembers() {
+		return memberRepository.findAll();
+	}
+
+	public Member findOne(Long memberId) {
+		return memberRepository.findOne(memberId);
+	}
+}
+
+```  
+***@Transactional***: 데이터베이스의 상태를 변경하는 작업 또는 한번에 수행되어야 하는 연산들을 의미한다.
+[참고](https://velog.io/@kdhyo/JavaTransactional-Annotation-%EC%95%8C%EA%B3%A0-%EC%93%B0%EC%9E%90-26her30h)  
+***@RequiredArgsConstructor***: final 필드에 대해 생성자를 만들어주는 lombok의 annotation  
+## 상품 도메인 개발
+### 
 
 ## 기타
 
