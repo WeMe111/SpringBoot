@@ -65,6 +65,11 @@ if-then-else : if ? then : else - ${student.age < 20} ? '청소년' : '성인'
 default : value ?: defaultValue  
 [참고](https://sujinhope.github.io/2021/03/25/Thymeleaf-2.-Thymeleaf-%EA%B8%B0%EB%B3%B8-%EB%AC%B8%EB%B2%95-+-%EC%82%AC%EC%9A%A9-%EC%98%88%EC%A0%9C.html#title2)  
 
+### Repository vs Service 의 역할의 차이점
+repository 패키지는 DB에 접근하는 모든 코드가 모여있다고 생각하시면 되고  
+service 패키지는 DB에 접근하는 코드는 repository에 위임하고, 비즈니스 로직과 관련된 모든 코드가 모여있습니다.  
+이렇게 구분해두면 비즈니스 로직과 관련된 부분에 문제가 발생했을 때는 service 패키지를 확인하고, DB 접근과 관련된 문제가 발생하면 repository 부분을 확인하면 됩니다.
+
 ## 환결설정
 
 ## 도메인 분석 설계
@@ -163,6 +168,12 @@ public class Order {
                     -> enum 순서 값을 저장  
                     @Enumerated(EnumType.STRING)  
                     -> enum 이름을 저장  
+```
+public enum OrderStatus {
+	ORDER, CANCEL  //데이터의 값을 정의해서 쓸 수 있다.
+}
+
+```
 ***LocalDateTime***: 날짜와 시간 정보 모두가 필요할 때 사용.  
 
 ![image](https://user-images.githubusercontent.com/94879395/165016978-86de5604-0a96-470e-a3f6-3e76223633c2.png)  
@@ -200,7 +211,7 @@ public class MemberRepository {
 [참고](https://whitepro.tistory.com/265)  
 ***@PersistenceContext***: EntityManagerFactor객체는 고객의 요청이 올 때마다 즉, 각 쓰레드마다 EntityManager 객체를 생성하고 해당 객체는 내부적으로 DB Connection Pool을 활용하여 DB에 연결을 합니다.
 [참고](https://jaimemin.tistory.com/1898)  
-***persist***: Persist는 최초 생성된 Entity를 영속화 하는데 사용된다.  
+***persist***: ...
 
 ### MemberServise
 ```
@@ -245,7 +256,54 @@ public class MemberService {
 [참고](https://velog.io/@kdhyo/JavaTransactional-Annotation-%EC%95%8C%EA%B3%A0-%EC%93%B0%EC%9E%90-26her30h)  
 ***@RequiredArgsConstructor***: final 필드에 대해 생성자를 만들어주는 lombok의 annotation  
 ## 상품 도메인 개발
-### 
+### ItemRepository
+```
+@Repository
+@RequiredArgsConstructor
+public class ItemRepository {
+	private final EntityManager entityManager;
+	
+	public void save(Item item) {
+		if(item.getId() == null) {
+			entityManager.persist(item);
+		}else {
+			entityManager.merge(item);
+		}
+	}
+	
+	public Item findOne(Long id) {
+		return entityManager.find(Item.class, id);
+	}
+	
+	public List<Item> findAll(){
+		return entityManager.createQuery("select i from Item i", Item.class)
+				.getResultList();
+	}
+}
+```
+*** ***
+### ItemService
+```
+@Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
+public class ItemService {
+	private final ItemRepository itemRepository;
+
+	@Transactional
+	public void saveItem(Item item) {
+		itemRepository.save(item);
+	}
+
+	public List<Item> findItems() {
+		return itemRepository.findAll();
+	}
+
+	public Item findOne(Long itemId) {
+		return itemRepository.findOne(itemId);
+	}
+}
+```
 
 ## 기타
 
