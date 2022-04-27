@@ -287,7 +287,7 @@ public class MemberRepository {
 [참고](https://whitepro.tistory.com/265)  
 ***@PersistenceContext***: EntityManagerFactor객체는 고객의 요청이 올 때마다 즉, 각 쓰레드마다 EntityManager 객체를 생성하고 해당 객체는 내부적으로 DB Connection Pool을 활용하여 DB에 연결을 합니다.
 [참고](https://jaimemin.tistory.com/1898)  
-***persist***: ...
+***persist***: [참고](https://kok202.tistory.com/246)  
 
 ### MemberServise
 ```
@@ -331,6 +331,7 @@ public class MemberService {
 ***@Transactional***: 데이터베이스의 상태를 변경하는 작업 또는 한번에 수행되어야 하는 연산들을 의미한다.
 [참고](https://velog.io/@kdhyo/JavaTransactional-Annotation-%EC%95%8C%EA%B3%A0-%EC%93%B0%EC%9E%90-26her30h)  
 ***@RequiredArgsConstructor***: final 필드에 대해 생성자를 만들어주는 lombok의 annotation  
+
 ## 상품 도메인 개발
 ### ItemRepository
 ```
@@ -357,7 +358,13 @@ public class ItemRepository {
 	}
 }
 ```
-*** ***
+***save***  
+getId가 아직 안만들여져서 null값이므로  if문 persist 으로 실해되고 getId가 있다면 else로 가서 maerge 로 정장된다.  
+
+***findOne***: Item.class에 있는 id를 찾아준다.  
+
+***findAll***: JPQL 쿼리를 넣어서 찾아준다.  
+
 ### ItemService
 ```
 @Service
@@ -380,6 +387,201 @@ public class ItemService {
 	}
 }
 ```
+***@Transactional***: 기본값은 false고 readOnly=true로 정의 해주면 데이터를 읽기만 할 수 있다. 
+saveItem에 오버라이딩을 해서 기본값 false로 정의해서 데이터를 저장 할 수있게 한다.  
+
+## 주문 도메인 개발
+### OrderRepository
+```
+@Repository
+public class OrderRepository {
+
+	@PersistenceContext
+	EntityManager em;
+
+	public void save(Order order) {
+		em.persist(order);
+	}
+
+	public Order findOne(Long id) {
+		return em.find(Order.class, id);
+	}
+
+	public List<Order> findAllByString(OrderSearch orderSearch) {
+		// language=JPAQL
+		String jpql = "select o From Order o join o.member m";
+		boolean isFirstCondition = true;
+		// 주문 상태 검색
+		if (orderSearch.getOrderStatus() != null) {
+			if (isFirstCondition) {
+				jpql += " where";
+				isFirstCondition = false;
+			} else {
+				jpql += " and";
+			}
+			jpql += " o.status = :status";
+		}
+		// 회원 이름 검색
+		if (StringUtils.hasText(orderSearch.getMemberName())) {
+			if (isFirstCondition) {
+				jpql += " where";
+				isFirstCondition = false;
+			} else {
+				jpql += " and";
+			}
+			jpql += " m.name like :name";
+		}
+		TypedQuery<Order> query = em.createQuery(jpql, Order.class).setMaxResults(1000); // 최대 1000건
+		if (orderSearch.getOrderStatus() != null) {
+			query = query.setParameter("status", orderSearch.getOrderStatus());
+		}
+		if (StringUtils.hasText(orderSearch.getMemberName())) {
+			query = query.setParameter("name", orderSearch.getMemberName());
+		}
+		return query.getResultList();
+	}
+}
+```
+
+
+### OrderService
+```
+@Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
+public class OrderService {
+
+	private final MemberRepository memberRepository;
+	private final OrderRepository orderRepository;
+	private final ItemRepository itemRepository;
+
+	/** 주문 */
+	@Transactional
+	public Long order(Long memberId, Long itemId, int count) {
+		// 엔티티 조회
+		Member member = memberRepository.findOne(memberId);
+		Item item = itemRepository.findOne(itemId);
+		// 배송정보 생성
+		Delivery delivery = new Delivery();
+		delivery.setAddress(member.getAddress());
+		delivery.setStatus(DeliveryStatus.READY);
+		// 주문상품 생성
+		OrderItem orderItem = OrderItem.createOrderItem(item, item.getPrice(), count);
+		// 주문 생성
+		Order order = Order.createOrder(member, delivery, orderItem);
+		// 주문 저장
+		orderRepository.save(order);
+		return order.getId();
+	}
+
+	/** 주문 취소 */
+	@Transactional
+	public void cancelOrder(Long orderId) {
+		// 주문 엔티티 조회
+		Order order = orderRepository.findOne(orderId);
+		// 주문 취소
+		order.cancel();
+	}
+}
+```
+
+
+## 웹 계층 개발
+### 회원 등록
+```
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/header :: header" />
+<style>
+.fieldError {
+	border-color: #bd2130;
+}
+</style>
+<body>
+	<div class="container">
+		<div th:replace="fragments/bodyHeader :: bodyHeader" />
+		<form role="form" action="/members/new" th:object="${memberForm}" method="post">
+			<div class="form-group">
+				<label th:for="name">이름</label> <input type="text"
+					th:field="*{name}" class="form-control" placeholder="이름을 입력하세요"
+					th:class="${#fields.hasErrors('name')}? 'form-controlfieldError' : 'form-control'">
+				<p th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Incorrect date</p>
+			</div>
+			<div class="form-group">
+				<label th:for="city">도시</label> <input type="text"
+					th:field="*{city}" class="form-control" placeholder="도시를 입력하세요">
+			</div>
+			<div class="form-group">
+				<label th:for="street">거리</label> <input type="text"
+					th:field="*{street}" class="form-control" placeholder="거리를 입력하세요">
+			</div>
+			<div class="form-group">
+				<label th:for="zipcode">우편번호</label> <input type="text"
+					th:field="*{zipcode}" class="form-control"
+					placeholder="우편번호를 입력하세요">
+			</div>
+			<button type="submit" class="btn btn-primary">Submit</button>
+		</form>
+		<br />
+		<div th:replace="fragments/footer :: footer" />
+	</div>
+	<!-- /container -->
+</body>
+</html>
+```
+***MemberController***  
+```
+@Controller
+@RequiredArgsConstructor
+public class MemberController {
+
+	private final MemberService memberService;
+	
+	//회원등록페이지이동
+	@GetMapping(value = "/members/new")
+	public String createForm(Model model) {
+		model.addAttribute("memberForm", new MemberForm());
+		return "members/createMemberForm";
+	}
+
+	@PostMapping(value = "/members/new")
+	public String create(@Valid MemberForm form, BindingResult result) {
+
+		if (result.hasErrors()) {
+			return "members/createMemberForm";
+		}
+
+		Address address = new Address(form.getCity(), form.getStreet(), form.getZipcode());
+
+		Member member = new Member();
+		member.setName(form.getName());
+		member.setAddress(address);
+		memberService.join(member);
+		return "redirect:/";
+	}
+
+	@GetMapping(value = "/members")
+	public String List(Model model) {
+		List<Member> members = memberService.findMembers();
+		model.addAttribute("members", members);
+
+		return "members/memberList";
+	}
+
+}
+```
+
+### 회원 목록 조회
+
+### 상품 등록
+
+### 상품 목록
+
+### 상품 수정
+
+### 상품 주문
+
+### 주문 목록 검색, 취소
 
 ## 기타
 
