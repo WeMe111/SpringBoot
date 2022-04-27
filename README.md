@@ -63,7 +63,11 @@ ${student.age > 20 or student.age < 10} 처럼 한 번에 묶어서 사용하는
 if-then : if ? then - ${student.age < 20} ? '청소년'  
 if-then-else : if ? then : else - ${student.age < 20} ? '청소년' : '성인'  
 default : value ?: defaultValue  
-[참고](https://sujinhope.github.io/2021/03/25/Thymeleaf-2.-Thymeleaf-%EA%B8%B0%EB%B3%B8-%EB%AC%B8%EB%B2%95-+-%EC%82%AC%EC%9A%A9-%EC%98%88%EC%A0%9C.html#title2)  
+[참고](https://sujinhope.github.io/2021/03/25/Thymeleaf-2.-Thymeleaf-%EA%B8%B0%EB%B3%B8-%EB%AC%B8%EB%B2%95-+-%EC%82%AC%EC%9A%A9-%EC%98%88%EC%A0%9C.html#title2) 
+***xmlns:th***  
+타임리프의 th속성을 사용하기 위해 선언된 네임스페이스이다.  
+순수 HTML로만 이루어진 페이지의 경우, 선언하지 않아도 무관하다.  
+
 ***th:replace & th:insert***  
 fragment와 함께 쓰이며, 각 화면에 분리해 놓은 fragment를 붙여넣을 때 사용한다.  
 th:replace는 태그 전체를 교체해주는 것이다.(아래 예시 경우, head 태그 자체가 fragments.html의 head로 바뀐다.)  
@@ -133,12 +137,22 @@ form의 validation error를 출력할 때 사용할 수 있다.
 ***th:field***  
 각각 필드들을 매핑을 해주는 역할을 한다. 설정해 준 값으로, th:object에 설정해 준 객체의 내부와 매칭해준다.  
 
-***th:if***  
-조건문처럼 사용 한다. 해당 조건이 만족할 때만 보여준다.  
+***th:if, unless***  
+타임리프의 조건문 if, unless는 해당 조건을 만족하면 해당 태그가 랜더링된다. 만약에 조건을 만족하지 않으면, 해당 태그는 무시된다.  
 ```
-    <div th:if="${error}">
-        <p>에러 발생</p>
-    </div>
+<span th:text="'미성년자'" th:if="${user.age} lt 20"></span>
+<span th:text="'미성년자'" th:unless="${user.age ge 20}"></span>
+```
+***switch***   
+타임리프의 Switch문은 th:switch=으로 case에 대한 변수값을 선언한다.  
+Case는 th:case=" "으로 선언한다. 이 때, th:switch로 선언된 변수의 값에 따라 다르게 동작한다  
+th:case="*"은 나머지 모든 케이스를 의미한다.  
+```
+<td th:switch="${user.age}">
+    <span th:case="10">10살</span>
+    <span th:case="20">20살</span>
+    <span th:case="*">기타</span>
+</td>
 ```
 
 ### Repository vs Service 의 역할의 차이점
@@ -572,12 +586,164 @@ public class MemberController {
 ```
 
 ### 회원 목록 조회
+```
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/header :: header" />
+<body>
+	<div class="container">
+		<div th:replace="fragments/bodyHeader :: bodyHeader" />
+		<div>
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>이름</th>
+						<th>도시</th>
+						<th>주소</th>
+						<th>우편번호</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="member : ${members}">
+						<td th:text="${member.id}"></td>
+						<td th:text="${member.name}"></td>
+						<td th:text="${member.address?.city}"></td>
+						<td th:text="${member.address?.street}"></td>
+						<td th:text="${member.address?.zipcode}"></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div th:replace="fragments/footer :: footer" />
+	</div>
+	<!-- /container -->
+</body>
+</html>
+```
+
 
 ### 상품 등록
+```
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/header :: header" />
+<body>
+	<div class="container">
+		<div th:replace="fragments/bodyHeader :: bodyHeader" />
+		<form th:action="@{/items/new}" th:object="${form}" method="post">
+			<div class="form-group">
+				<label th:for="name">상품명</label> <input type="text"
+					th:field="*{name}" class="form-control" placeholder="이름을 입력하세요">
+			</div>
+			<div class="form-group">
+				<label th:for="price">가격</label> <input type="number"
+					th:field="*{price}" class="form-control" placeholder="가격을 입력하세요">
+			</div>
+			<div class="form-group">
+				<label th:for="stockQuantity">수량</label> <input type="number"
+					th:field="*{stockQuantity}" class="form-control"
+					placeholder="수량을 입력하세요">
+			</div>
+			<div class="form-group">
+				<label th:for="author">저자</label> <input type="text"
+					th:field="*{author}" class="form-control" placeholder="저자를 입력하세요">
+			</div>
+			<div class="form-group">
+				<label th:for="isbn">ISBN</label> <input type="text"
+					th:field="*{isbn}" class="form-control" placeholder="ISBN을 입력하세요">
+			</div>
+			<button type="submit" class="btn btn-primary">Submit</button>
+		</form>
+		<br />
+		<div th:replace="fragments/footer :: footer" />
+	</div>
+	<!-- /container -->
+</body>
+</html>
+```
+
 
 ### 상품 목록
+```
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/header :: header" />
+<body>
+	<div class="container">
+		<div th:replace="fragments/bodyHeader :: bodyHeader" />
+		<div>
+			<table class="table table-striped">
+				<thead>
+					<tr>
+						<th>#</th>
+						<th>상품명</th>
+						<th>가격</th>
+						<th>재고수량</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr th:each="item : ${items}">
+						<td th:text="${item.id}"></td>
+						<td th:text="${item.name}"></td>
+						<td th:text="${item.price}"></td>
+						<td th:text="${item.stockQuantity}"></td>
+						<td><a href="#" th:href="@{/items/{id}/edit (id=${item.id})}"
+							class="btn btn-primary" role="button">수정</a></td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div th:replace="fragments/footer :: footer" />
+	</div>
+	<!-- /container -->
+</body>
+</html>
+```
+
 
 ### 상품 수정
+```
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/header :: header" />
+<body>
+	<div class="container">
+		<div th:replace="fragments/bodyHeader :: bodyHeader" />
+		<form th:object="${form}" method="post">
+			<!-- id -->
+			<input type="hidden" th:field="*{id}" />
+			<div class="form-group">
+				<label th:for="name">상품명</label> <input type="text"
+					th:field="*{name}" class="form-control" placeholder="이름을 입력하세요" />
+			</div>
+			<div class="form-group">
+				<label th:for="price">가격</label> <input type="number"
+					th:field="*{price}" class="form-control" placeholder="가격을 입력하세요" />
+			</div>
+			<div class="form-group">
+				<label th:for="stockQuantity">수량</label> <input type="number"
+					th:field="*{stockQuantity}" class="form-control"
+					placeholder="수량을 입력하세요" />
+			</div>
+			<div class="form-group">
+				<label th:for="author">저자</label> <input type="text"
+					th:field="*{author}" class="form-control" placeholder="저자를 입력하세요" />
+			</div>
+			<div class="form-group">
+				<label th:for="isbn">ISBN</label> <input type="text"
+					th:field="*{isbn}" class="form-control" placeholder="ISBN을 입력하세요" />
+			</div>
+			<button type="submit" class="btn btn-primary">Submit</button>
+		</form>
+		<div th:replace="fragments/footer :: footer" />
+	</div>
+	<!-- /container -->
+</body>
+</html>
+```
+
 
 ### 상품 주문
 
