@@ -363,7 +363,7 @@ getId가 아직 안만들여져서 null값이므로  if문 persist 으로 실해
 
 ***findOne***: Item.class에 있는 id를 찾아준다.  
 
-***findAll***: JPQL 쿼리를 넣어서 찾아준다.  
+***findAll***: JPQL 쿼리를 작성해서 동작  
 
 ### ItemService
 ```
