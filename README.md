@@ -64,6 +64,82 @@ if-then : if ? then - ${student.age < 20} ? '청소년'
 if-then-else : if ? then : else - ${student.age < 20} ? '청소년' : '성인'  
 default : value ?: defaultValue  
 [참고](https://sujinhope.github.io/2021/03/25/Thymeleaf-2.-Thymeleaf-%EA%B8%B0%EB%B3%B8-%EB%AC%B8%EB%B2%95-+-%EC%82%AC%EC%9A%A9-%EC%98%88%EC%A0%9C.html#title2)  
+***th:replace & th:insert***  
+fragment와 함께 쓰이며, 각 화면에 분리해 놓은 fragment를 붙여넣을 때 사용한다.  
+th:replace는 태그 전체를 교체해주는 것이다.(아래 예시 경우, head 태그 자체가 fragments.html의 head로 바뀐다.)  
+```
+// index.html
+<head th:replace="fragments.html :: head"></head>
+```
+th:insert는 해당 태그 내부에 fragment를 삽입해주는 것이다.(아래 예시 경우, div 태그 내부에 fragments.html의 content가 삽입된다.)  
+```
+// index.html
+<div th:insert="fragments.html :: content">
+
+</div>
+```
+***th:text***  
+화면에 값을 출력할 때 사용  
+```
+<span th:text="${nickname}"></span>
+```
+***th:each***  
+Model로 넘어온 값을 th:each를 사용하여 반복적으로 처리할 수 있다. <tr th:each="variable : ${list}">와 같은 방식으로 사용하며, ${list} 로 받아온 것을 변수로 하나씩 가져온다.  
+```
+<tr th:each="member : ${members}">
+	<td th:text="${member.id}"></td>
+	<td th:text="${member.name}"></td>
+	<td th:text="${member.address?.city}"></td>
+	<td th:text="${member.address?.street}"></td>
+	<td th:text="${member.address?.zipcode}"></td>
+</tr>
+```
+![image](https://user-images.githubusercontent.com/94879395/165416719-c0c521b5-8872-4f69-ba71-f84b59fc4053.png)  
+***th:object***
+form submit을 할 때, form의 데이터가 th:object에 설정해준 객체로 받아진다.  
+```
+ <form th:action="@{/sign-up}" th:object="${signUpForm}" method="post">
+                <div class="form-group">
+                    <label for="nickname">닉네임</label>
+                    <input id="nickname" type="text" th:field="*{nickname}" class="form-control">
+                </div>
+            </form>
+```
+***th:errors***  
+해당 value의 error가 있는 경우 출력한다.  
+```
+<ul>
+    <li th:errors="*{id}" />
+    <li th:errors="*{name}" />
+</ul>
+```
+form의 validation error를 출력할 때 사용할 수 있다.  
+```
+	   <form class="needs-validation col-sm-6" action="#"
+                  th:action="@{/sign-up}" th:object="${signUpForm}" method="post" novalidate>
+                <div class="form-group">
+                    <label for="nickname">닉네임</label>
+                    <input id="nickname" type="text" th:field="*{nickname}" class="form-control"
+                           placeholder="junseo" aria-describedby="nicknameHelp" required minlength="3" maxlength="20">
+                    <small id="nicknameHelp" class="form-text text-muted">
+                        공백없이 문자와 숫자로만 3자 이상 20자 이내로 입력하세요. 가입후에 변경할 수 있습니다.
+                    </small>
+                    <small class="invalid-feedback">닉네임을 입력하세요.</small>
+                    <small class="form-text text-danger" th:if="${#fields.hasErrors('nickname')}" th:errors="*{nickname}">Nickname Error</small>
+                </div>
+            </form>
+```
+
+***th:field***  
+각각 필드들을 매핑을 해주는 역할을 한다. 설정해 준 값으로, th:object에 설정해 준 객체의 내부와 매칭해준다.  
+
+***th:if***  
+조건문처럼 사용 한다. 해당 조건이 만족할 때만 보여준다.  
+```
+    <div th:if="${error}">
+        <p>에러 발생</p>
+    </div>
+```
 
 ### Repository vs Service 의 역할의 차이점
 repository 패키지는 DB에 접근하는 모든 코드가 모여있다고 생각하시면 되고  
